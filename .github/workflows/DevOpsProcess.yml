@@ -31,3 +31,20 @@ jobs:
           sfdx force:source:push -u CIOrg
           sfdx force:apex:test:run -l RunLocalTests -u CIOrg -c -r human -w 2 --verbose
           sfdx force:org:delete -u CIOrg -p
+
+  #CD: Responsavel por realizar o deploy na org developer
+  CD:
+    needs: [ CI ]
+    runs-on: ubuntu-latest
+
+    container:
+      image: salesforce/salesforcedx
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: DEPLOY
+        run: |
+          echo force://${{ secrets.CLI_APP }}::${{ secrets.USER_TOKEN }}@${{ secrets.SF_URL }} >> config/auth.txt
+          sfdx force:auth:sfdxurl:store -f config/auth.txt -s -a MyOrg
+          sfdx force:source:deploy -p "force-app/main/default" -u MyOrg -w 2 --verbose
