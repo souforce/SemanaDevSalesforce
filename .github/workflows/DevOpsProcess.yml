@@ -1,0 +1,33 @@
+#NOMEAR O WORKFLOW
+name: DevOpsProcess
+
+#Qual evento que dispara este workflow ?
+on:
+  push:
+    branches: [master]
+
+# JOBS SAO PROCESSOS QUE EXECUTAM EM AMBIENTES SEPARADOS
+jobs:
+  
+  #CI : Responsavel por testar o codigo da nossa aplicacao
+  CI:
+    
+    #SO que o job sera executado
+    runs-on: ubuntu-latest
+    
+    #Definindo a imagem do container
+    container:
+      image: salesforce/salesforcedx
+    
+    #Passos do meu Job
+    steps:
+      - uses: action/checkout@v2
+
+      - name: VALIDATE PACKAGE
+        run: |
+          echo force://${{ secrets.CLI_APP }}::${{ secrets.USER_TOKEN }}@${{ secrets.SF_URL }} >> config/auth.txt
+          sfdx force:auth:sfdxurl:store -f config/auth.txt -s -a MyOrg
+          sfdx force:org:create -f config/project-scratch-def.json -a CIOrg -s -v MyOrg
+          sfdx force:source:push -u CIOrg
+          sfdx force:apex:test:run -l RunLocalTests -u CIOrg -c -r human -w 2 --verbose
+          sfdx force:org:delete -u CIOrg -p
